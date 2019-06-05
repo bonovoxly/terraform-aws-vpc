@@ -883,7 +883,7 @@ EOT
 
 resource "aws_security_group" "nat" {
   count = var.nat_instance ? 1 : 0
-  description = "${var.env} nat security group"
+  description = "${var.name} nat security group"
 
   # outgoing rules
   egress {
