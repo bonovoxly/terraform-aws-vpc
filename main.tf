@@ -129,7 +129,7 @@ resource "aws_route" "public_internet_gateway" {
 # There are as many routing tables as the number of NAT gateways
 #################
 resource "aws_route_table" "private" {
-  count = var.nat_instance_id != "" ? 1 : var.create_vpc && local.max_subnet_length > 0 ? local.nat_gateway_count : 0
+  count = var.create_vpc && local.max_subnet_length > 0 ? local.nat_gateway_count : 0
 
   vpc_id = local.vpc_id
 
