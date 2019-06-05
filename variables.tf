@@ -194,7 +194,7 @@ variable "one_nat_gateway_per_az" {
   default     = false
 }
 
-variable "nat_instance" {
+variable "nat_instance_id" {
   description = "The instance that will act as the NAT gateway. Replaces the AWS managed NAT Gateway."
   type        = string
   default     = ""
