@@ -818,7 +818,7 @@ resource "aws_route" "private_nat_gateway" {
   route_table_id         = element(aws_route_table.private.*.id, count.index)
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = var.nat_instance_id == "" ? element(aws_nat_gateway.this.*.id, count.index) : ""
-  instance_id            = var.nat_instance_id ? var.nat_instance_id : ""
+  instance_id            = var.nat_instance_id != "" ? var.nat_instance_id : ""
 
   timeouts {
     create = "5m"
