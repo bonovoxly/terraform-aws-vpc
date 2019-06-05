@@ -5,7 +5,7 @@ locals {
     length(var.database_subnets),
     length(var.redshift_subnets),
   )
-  nat_gateway_count = var.nat_instance_id != "" ? 1 : var.single_nat_gateway ? 1 : var.one_nat_gateway_per_az ? length(var.azs) : local.max_subnet_length
+  nat_gateway_count = var.nat_instance ? 1 : var.single_nat_gateway ? 1 : var.one_nat_gateway_per_az ? length(var.azs) : local.max_subnet_length
 
   # Use `local.vpc_id` to give a hint to Terraform that subnets should be deleted before secondary CIDR blocks can be free!
   vpc_id = element(
@@ -827,7 +827,7 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_instance" "nat" {
-  count = var.nat_instance_id != "" ? 1 : 0
+  count                       = var.nat_instance ? 1 : 0
   ami                         = data.aws_ami.ubuntu.id
   associate_public_ip_address = true
   instance_type               = nat_instance_type
@@ -839,9 +839,39 @@ resource "aws_instance" "nat" {
     volume_size = "20"
   }
   key_name                    = var.nat_instance_keypair
-  subnet_id      = element(aws_subnet.public.*.id, count.index)
+  subnet_id                   = element(aws_subnet.public.*.id, count.index)
   tenancy                     = var.instance_tenancy
-  vpc_security_group_ids = [aws_security_group.nat.id]
+  user_data                   = <<-EOT
+apt-get update
+apt-get -y install iptables iptables-persistent
+echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/10-ipv4-forwarding.conf
+service procps start
+cat <<EOF
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+-A POSTROUTING -s 10.5.0.0/16 -o eth0 -j MASQUERADE
+COMMIT
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -p icmp -j ACCEPT
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp -s ${var.cidr} --dport 22 -j ACCEPT
+-A INPUT -i eth0 -s ${var.cidr} -j ACCEPT
+-A INPUT -j REJECT --reject-with icmp-host-prohibited
+-A FORWARD -s ${var.cidr} -i eth0 -o eth0 -j ACCEPT
+-A FORWARD -i eth0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+-A FORWARD -j REJECT --reject-with icmp-host-prohibited
+COMMIT
+EOF
+iptables-restore < /etc/iptables/rules.v4
+EOT
+  vpc_security_group_ids      = [aws_security_group.nat.id]
   tags = merge(
     {
       "Name" = format("%s-nat", var.name)
@@ -852,7 +882,7 @@ resource "aws_instance" "nat" {
 }
 
 resource "aws_security_group" "nat" {
-  count = var.nat_instance_id != "" ? 1 : 0
+  count = var.nat_instance ? 1 : 0
   description = "${var.env} nat security group"
 
   # outgoing rules
@@ -883,12 +913,12 @@ resource "aws_security_group" "nat" {
 }
 
 resource "aws_route" "private_nat_gateway" {
-  count = var.nat_instance_id != "" ? local.nat_gateway_count : var.create_vpc && var.enable_nat_gateway ? local.nat_gateway_count : 0
+  count = var.nat_instance ? local.nat_gateway_count : var.create_vpc && var.enable_nat_gateway ? local.nat_gateway_count : 0
 
   route_table_id         = element(aws_route_table.private.*.id, count.index)
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = var.nat_instance_id == "" ? element(aws_nat_gateway.this.*.id, count.index) : ""
-  instance_id            = var.nat_instance_id != "" ? var.nat_instance_id : ""
+  nat_gateway_id         = var.nat_instance ? "" : element(aws_nat_gateway.this.*.id, count.index)
+  instance_id            = var.nat_instance ? "" : aws_instance.nat.id
 
   timeouts {
     create = "5m"
