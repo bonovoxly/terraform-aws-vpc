@@ -812,6 +812,76 @@ resource "aws_nat_gateway" "this" {
   depends_on = [aws_internet_gateway.this]
 }
 
+# NAT instance gateway
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*"]
+  }
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+  owners = ["513442679011"]
+}
+
+resource "aws_instance" "nat" {
+  count = var.nat_instance_id != "" ? 1 : 0
+  ami                         = data.aws_ami.ubuntu.id
+  associate_public_ip_address = true
+  instance_type               = nat_instance_type
+  lifecycle {
+    ignore_changes = [ami,tags]
+  }
+  root_block_device {
+    volume_type = "gp2"
+    volume_size = "20"
+  }
+  key_name                    = var.nat_instance_keypair
+  subnet_id      = element(aws_subnet.public.*.id, count.index)
+  tenancy                     = var.instance_tenancy
+  vpc_security_group_ids = [aws_security_group.nat.id]
+  tags = merge(
+    {
+      "Name" = format("%s-nat", var.name)
+    },
+    var.tags,
+    var.vpc_tags,
+  )
+}
+
+resource "aws_security_group" "nat" {
+  count = var.nat_instance_id != "" ? 1 : 0
+  description = "${var.env} nat security group"
+
+  # outgoing rules
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # SSH access
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.cidr]
+  }
+
+  name = "${var.name}-nat-securitygroup"
+  tags = merge(
+    {
+      "Name" = format("%s-nat-securitygroup", var.name)
+    },
+    var.tags,
+    var.vpc_tags,
+  )
+  vpc_id = aws_vpc.this[0].id
+}
+
 resource "aws_route" "private_nat_gateway" {
   count = var.nat_instance_id != "" ? local.nat_gateway_count : var.create_vpc && var.enable_nat_gateway ? local.nat_gateway_count : 0
 

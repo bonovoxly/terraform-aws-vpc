@@ -194,10 +194,21 @@ variable "one_nat_gateway_per_az" {
   default     = false
 }
 
-variable "nat_instance_id" {
-  description = "The instance that will act as the NAT gateway. Replaces the AWS managed NAT Gateway."
+# variable "nat_instance_id" {
+#   description = "The instance that will act as the NAT gateway. Replaces the AWS managed NAT Gateway."
+#   type        = string
+#   default     = ""
+# }
+
+variable "nat_instance_type" {
+  description = "The instance type/size to use. Defaults to a t2.micro"
   type        = string
-  default     = ""
+  default     = "t2.micro"
+}
+
+variable "nat_instance_keypair" {
+  description = "The AWS EC2 SSH keypair to use. Needs to be created first."
+  type        = string
 }
 
 variable "reuse_nat_ips" {
