@@ -830,7 +830,7 @@ resource "aws_instance" "nat" {
   count                       = var.nat_instance ? 1 : 0
   ami                         = data.aws_ami.ubuntu.id
   associate_public_ip_address = true
-  instance_type               = nat_instance_type
+  instance_type               = var.nat_instance_type
   lifecycle {
     ignore_changes = [ami,tags]
   }
@@ -871,7 +871,7 @@ COMMIT
 EOF
 iptables-restore < /etc/iptables/rules.v4
 EOT
-  vpc_security_group_ids      = [aws_security_group.nat.id]
+  vpc_security_group_ids      = [aws_security_group.nat[0].id]
   tags = merge(
     {
       "Name" = format("%s-nat", var.name)
