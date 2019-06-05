@@ -871,7 +871,7 @@ COMMIT
 EOF
 iptables-restore < /etc/iptables/rules.v4
 EOT
-  vpc_security_group_ids      = [aws_security_group.nat[0].id]
+  vpc_security_group_ids      = [element(aws_security_group.nat.*.id, count.index)]
   tags = merge(
     {
       "Name" = format("%s-nat", var.name)
@@ -909,7 +909,7 @@ resource "aws_security_group" "nat" {
     var.tags,
     var.vpc_tags,
   )
-  vpc_id = aws_vpc.this[0].id
+  vpc_id = element(aws_vpc.this.*.id, count.index)
 }
 
 resource "aws_route" "private_nat_gateway" {
@@ -918,7 +918,7 @@ resource "aws_route" "private_nat_gateway" {
   route_table_id         = element(aws_route_table.private.*.id, count.index)
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = var.nat_instance ? "" : element(aws_nat_gateway.this.*.id, count.index)
-  instance_id            = var.nat_instance ? "" : aws_instance.nat.id
+  instance_id            = var.nat_instance ? "" : element(aws_instance.nat.*.id, count.index)
 
   timeouts {
     create = "5m"
