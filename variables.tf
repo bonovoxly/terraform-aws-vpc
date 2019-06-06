@@ -200,6 +200,12 @@ variable "nat_instance" {
   default     = false
 }
 
+variable "nat_instance_domain_name" {
+  description = "Should be true if you want the NAT instance to be used as a DNS resolver."
+  type        = bool
+  default     = false
+}
+
 variable "nat_instance_type" {
   description = "The instance type/size to use. Defaults to a t2.micro"
   type        = string

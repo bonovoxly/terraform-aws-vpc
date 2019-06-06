@@ -54,7 +54,7 @@ resource "aws_vpc_dhcp_options" "this" {
   count = var.create_vpc && var.enable_dhcp_options ? 1 : 0
 
   domain_name          = var.dhcp_options_domain_name
-  domain_name_servers  = var.dhcp_options_domain_name_servers
+  domain_name_servers  = var.nat_instance_domain_name ? aws_instance.nat.private_ip : var.dhcp_options_domain_name_servers
   ntp_servers          = var.dhcp_options_ntp_servers
   netbios_name_servers = var.dhcp_options_netbios_name_servers
   netbios_node_type    = var.dhcp_options_netbios_node_type
@@ -859,7 +859,9 @@ resource "aws_instance" "nat" {
 apt-get update
 echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
 echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
-apt-get -y install iptables iptables-persistent
+apt-get -y install iptables iptables-persistent unbound
+systemctl start unbound
+systemctl enable unbound
 echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/10-ipv4-forwarding.conf
 sysctl --system
 cat <<EOF > /etc/iptables/rules.v4
@@ -877,7 +879,7 @@ COMMIT
 -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
 -A INPUT -p icmp -j ACCEPT
 -A INPUT -i lo -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp -s ${var.cidr} --dport 22 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
 -A INPUT -i eth0 -s ${var.cidr} -j ACCEPT
 -A INPUT -j REJECT --reject-with icmp-host-prohibited
 -A FORWARD -s ${var.cidr} -i eth0 -o eth0 -j ACCEPT
@@ -909,12 +911,19 @@ resource "aws_security_group" "nat" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH access
+  # incoming rules 
   ingress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = [var.cidr]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   name = "${var.name}-nat-securitygroup"
