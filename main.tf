@@ -839,6 +839,7 @@ resource "aws_instance" "nat" {
     volume_size = "20"
   }
   key_name                    = var.nat_instance_keypair
+  source_dest_check = false
   subnet_id                   = element(aws_subnet.public.*.id, count.index)
   tenancy                     = var.instance_tenancy
   user_data                   = <<-EOT
