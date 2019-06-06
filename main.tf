@@ -847,7 +847,7 @@ apt-get update
 apt-get -y install iptables iptables-persistent
 echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/10-ipv4-forwarding.conf
 service procps start
-cat <<EOF
+cat <<EOF > /etc/iptables/rules.v4
 *nat
 :PREROUTING ACCEPT [0:0]
 :INPUT ACCEPT [0:0]
