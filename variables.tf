@@ -209,6 +209,7 @@ variable "nat_instance_type" {
 variable "nat_instance_keypair" {
   description = "The AWS EC2 SSH keypair to use. Needs to be created first."
   type        = string
+  default     = ""
 }
 
 variable "reuse_nat_ips" {
