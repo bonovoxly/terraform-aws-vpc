@@ -842,6 +842,7 @@ resource "aws_instance" "nat" {
   subnet_id                   = element(aws_subnet.public.*.id, count.index)
   tenancy                     = var.instance_tenancy
   user_data                   = <<-EOT
+#!/bin/bash
 apt-get update
 apt-get -y install iptables iptables-persistent
 echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/10-ipv4-forwarding.conf
