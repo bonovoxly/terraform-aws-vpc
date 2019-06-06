@@ -844,6 +844,8 @@ resource "aws_instance" "nat" {
   user_data                   = <<-EOT
 #!/bin/bash
 apt-get update
+echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
 apt-get -y install iptables iptables-persistent
 echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/10-ipv4-forwarding.conf
 service procps start
