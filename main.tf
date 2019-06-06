@@ -194,7 +194,7 @@ resource "aws_route" "database_nat_gateway" {
 }
 
 resource "aws_route" "database_nat_instance" {
-  count = var.create_vpc && var.create_database_subnet_route_table && length(var.database_subnets) > 0 && false == var.create_database_internet_gateway_route && var.create_database_nat_gateway_route && var.var.nat_instance ? local.nat_gateway_count : 0
+  count = var.create_vpc && var.create_database_subnet_route_table && length(var.database_subnets) > 0 && false == var.create_database_internet_gateway_route && var.create_database_nat_gateway_route && var.nat_instance ? local.nat_gateway_count : 0
 
   route_table_id         = element(aws_route_table.private.*.id, count.index)
   destination_cidr_block = "0.0.0.0/0"
